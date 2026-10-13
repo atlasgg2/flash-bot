@@ -30,4 +30,12 @@ Part 1 (general info commands): implemented
 - privacy
 - membercount
 
+Part 2 (moderation): implemented
+- kick
+- ban
+- warn
+- warnings
+- purge
+- lock
+
 The remaining manifest pages are not yet implemented; the project is still in progress.

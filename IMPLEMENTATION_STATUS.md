@@ -1,18 +1,17 @@
-IMPLEMENTATION PROGRESS
+Part 2: Moderation commands added
 
-Part 0 — foundation: completed
-- repo initialized
-- SQLite database bootstrap
-- command loader and message handler
-- whitelist repository + hidden owner-only commands
-- basic help and ping test coverage
+Commands implemented in this batch:
+- kick
+- ban
+- warn
+- warnings
+- purge
+- lock
 
-Part 1 — general info commands: implemented
-- ping, uptime, botinfo, serverinfo, userinfo, avatar, banner, roles, emojis, stickers, boosts, invite, support, vote, stats, credits, changelog, terms, privacy, membercount
-- tests added for command visibility and guild prefix persistence
+Added tests:
+- permissionGuard unit tests
+- moderation DB tests for warnings
 
-Remaining work:
-- shared permission middleware and cooldown layer
-- moderation, utility, economy, leveling, and every remaining manifest page
-- full README overhaul and deployment docs
-- end-to-end tests for hidden owner enforcement and safety checks
+Notes:
+- Moderation commands use the permissionGuard to validate user and bot permissions and role hierarchy.
+- Destructive batch operations will be confirmed in later steps (masskick/massban etc.).
