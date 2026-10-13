@@ -78,6 +78,42 @@ function init() {
       created_at INTEGER NOT NULL,
       PRIMARY KEY (guild_id, word)
     );
+
+    CREATE TABLE IF NOT EXISTS economy_accounts (
+      guild_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      wallet INTEGER NOT NULL DEFAULT 0,
+      bank INTEGER NOT NULL DEFAULT 0,
+      PRIMARY KEY (guild_id, user_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS economy_transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      note TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS command_cooldowns (
+      guild_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      command_name TEXT NOT NULL,
+      until_epoch INTEGER NOT NULL,
+      PRIMARY KEY (guild_id, user_id, command_name)
+    );
+
+    CREATE TABLE IF NOT EXISTS reminders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      guild_id TEXT NOT NULL,
+      user_id TEXT NOT NULL,
+      text TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      due_at INTEGER NOT NULL,
+      sent INTEGER NOT NULL DEFAULT 0
+    );
   `);
   info('Database initialized at', config.DATABASE_PATH);
 }
@@ -87,7 +123,6 @@ function getDB() {
   return db;
 }
 
-// Guild settings
 function getGuildSettings(guildId) {
   const row = getDB().prepare('SELECT guild_id, prefix, created_at FROM guild_settings WHERE guild_id = ?').get(guildId);
   return row || null;
@@ -108,7 +143,6 @@ function getGuildPrefix(guildId) {
   return row && row.prefix ? row.prefix : null;
 }
 
-// Warnings
 function addWarning(guildId, userId, moderatorId, reason) {
   const createdAt = Date.now();
   const stmt = getDB().prepare(`
@@ -128,7 +162,6 @@ function getWarnings(guildId, userId) {
   `).all(guildId, userId);
 }
 
-// Temp channels
 function addTempChannel(guildId, channelId, expiresAt) {
   return getDB().prepare('INSERT OR REPLACE INTO temp_channels (guild_id, channel_id, expires_at) VALUES (?, ?, ?)').run(guildId, channelId, expiresAt);
 }
@@ -141,7 +174,6 @@ function removeTempChannel(guildId, channelId) {
   return getDB().prepare('DELETE FROM temp_channels WHERE guild_id = ? AND channel_id = ?').run(guildId, channelId);
 }
 
-// Temp roles
 function addTempRole(guildId, userId, roleId, expiresAt) {
   return getDB().prepare('INSERT OR REPLACE INTO temp_roles (guild_id, user_id, role_id, expires_at) VALUES (?, ?, ?, ?)').run(guildId, userId, roleId, expiresAt);
 }
@@ -154,13 +186,11 @@ function removeTempRole(guildId, userId, roleId) {
   return getDB().prepare('DELETE FROM temp_roles WHERE guild_id = ? AND user_id = ? AND role_id = ?').run(guildId, userId, roleId);
 }
 
-// Antiraid settings
 function setAntiraidSetting(guildId, key, value) {
   const allowed = ['antiraid_on','antispam_on','antilink_on','antiinvite_on','antibot_on','antiflood_on','altcheck_days'];
   if (!allowed.includes(key)) throw new Error('Invalid antiraid key');
   const exists = getDB().prepare('SELECT 1 FROM antiraid_settings WHERE guild_id = ?').get(guildId);
   if (!exists) {
-    // insert defaults
     getDB().prepare(`INSERT INTO antiraid_settings (guild_id, antiraid_on, antispam_on, antilink_on, antiinvite_on, antibot_on, antiflood_on, altcheck_days) VALUES (?,0,0,0,0,0,0,0)`).run(guildId);
   }
   getDB().prepare(`UPDATE antiraid_settings SET ${key} = ? WHERE guild_id = ?`).run(value, guildId);
@@ -171,7 +201,6 @@ function getAntiraidSettings(guildId) {
   return getDB().prepare('SELECT * FROM antiraid_settings WHERE guild_id = ?').get(guildId) || null;
 }
 
-// Blacklist
 function addBlacklistUser(guildId, userId, addedBy) {
   const ts = Date.now();
   return getDB().prepare('INSERT OR REPLACE INTO blacklist_users (guild_id, user_id, added_by, created_at) VALUES (?, ?, ?, ?)').run(guildId, userId, addedBy, ts);
@@ -186,7 +215,6 @@ function isUserBlacklisted(guildId, userId) {
   return !!row;
 }
 
-// Wordfilter
 function addWordfilter(guildId, word, createdBy) {
   const ts = Date.now();
   return getDB().prepare('INSERT OR REPLACE INTO wordfilters (guild_id, word, created_by, created_at) VALUES (?, ?, ?, ?)').run(guildId, word.toLowerCase(), createdBy, ts);
@@ -198,6 +226,53 @@ function removeWordfilter(guildId, word) {
 
 function listWordfilters(guildId) {
   return getDB().prepare('SELECT word, created_by, created_at FROM wordfilters WHERE guild_id = ? ORDER BY created_at DESC').all(guildId);
+}
+
+function ensureEconomyAccount(guildId, userId) {
+  const row = getDB().prepare('SELECT * FROM economy_accounts WHERE guild_id = ? AND user_id = ?').get(guildId, userId);
+  if (row) return row;
+  getDB().prepare('INSERT INTO economy_accounts (guild_id, user_id, wallet, bank) VALUES (?, ?, ?, ?)').run(guildId, userId, 0, 0);
+  return getDB().prepare('SELECT * FROM economy_accounts WHERE guild_id = ? AND user_id = ?').get(guildId, userId);
+}
+
+function getEconomyAccount(guildId, userId) {
+  return getDB().prepare('SELECT * FROM economy_accounts WHERE guild_id = ? AND user_id = ?').get(guildId, userId) || ensureEconomyAccount(guildId, userId);
+}
+
+function setEconomyAccount(guildId, userId, wallet, bank) {
+  getDB().prepare('UPDATE economy_accounts SET wallet = ?, bank = ? WHERE guild_id = ? AND user_id = ?').run(wallet, bank, guildId, userId);
+  return getEconomyAccount(guildId, userId);
+}
+
+function addTransaction(guildId, userId, type, amount, note = '') {
+  getDB().prepare('INSERT INTO economy_transactions (guild_id, user_id, type, amount, created_at, note) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(guildId, userId, type, amount, Date.now(), note || '');
+}
+
+function setCooldown(guildId, userId, commandName, ms) {
+  const until = Date.now() + ms;
+  getDB().prepare('INSERT OR REPLACE INTO command_cooldowns (guild_id, user_id, command_name, until_epoch) VALUES (?, ?, ?, ?)')
+    .run(guildId, userId, commandName, until);
+}
+
+function getCooldown(guildId, userId, commandName) {
+  const row = getDB().prepare('SELECT until_epoch FROM command_cooldowns WHERE guild_id = ? AND user_id = ? AND command_name = ?').get(guildId, userId, commandName);
+  if (!row) return 0;
+  return row.until_epoch - Date.now();
+}
+
+function addReminder(guildId, userId, text, dueAt) {
+  const result = getDB().prepare('INSERT INTO reminders (guild_id, user_id, text, created_at, due_at, sent) VALUES (?, ?, ?, ?, ?, 0)')
+    .run(guildId, userId, text, Date.now(), dueAt);
+  return { id: result.lastInsertRowid, guild_id: guildId, user_id: userId, text, due_at: dueAt };
+}
+
+function listRemindersForUser(guildId, userId) {
+  return getDB().prepare('SELECT * FROM reminders WHERE guild_id = ? AND user_id = ? AND sent = 0 ORDER BY due_at ASC').all(guildId, userId);
+}
+
+function deleteReminder(id) {
+  return getDB().prepare('DELETE FROM reminders WHERE id = ?').run(id);
 }
 
 module.exports = {
@@ -221,5 +296,14 @@ module.exports = {
   isUserBlacklisted,
   addWordfilter,
   removeWordfilter,
-  listWordfilters
+  listWordfilters,
+  ensureEconomyAccount,
+  getEconomyAccount,
+  setEconomyAccount,
+  addTransaction,
+  setCooldown,
+  getCooldown,
+  addReminder,
+  listRemindersForUser,
+  deleteReminder
 };

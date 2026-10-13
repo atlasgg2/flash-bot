@@ -1,25 +1,17 @@
-Part 4 — Security & Antiraid implemented (commands 101-120 subset)
+Part 5: Utilities + economy core batch implemented
 
-Commands added:
-- antiraid
-- antispam
-- antilink
-- antiinvite
-- antibot
-- antiflood
-- altcheck
-- blacklistuser
-- unblacklistuser
-- wordfilter
+Added modules and commands:
+- utility: calculator, weather, define, urban, remind, reminders, delreminder, time, qr, shorten, color
+- economy core: balance, daily, weekly, monthly, work, beg, pay, rob, inventory, shop, buy, sell
+- validators and economy repository for persistent balances/cooldowns/reminders
+- tests/economy.test.js
 
 Database additions:
-- temp_channels, temp_roles
-- antiraid_settings
-- blacklist_users
-- wordfilters
-
-Tests:
-- antiraid.test.js covers toggles, blacklist, and wordfilter DB helpers
+- economy_accounts
+- economy_transactions
+- command_cooldowns
+- reminders
 
 Notes:
-- Enforcement hooks (real-time message scanning) will be added in a later batch to avoid heavy event logic in this step.
+- Public-time/provider commands fall back gracefully and are honest about service availability.
+- No secrets are used in code; all settings remain in env variables.
