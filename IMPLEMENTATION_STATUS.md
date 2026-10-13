@@ -1,9 +1,25 @@
-Part 3: Channel & Role management added (batch)
+Part 4 — Security & Antiraid implemented (commands 101-120 subset)
 
-Commands implemented in this batch:
-- createchannel, createvoice, createstage, createcat, deletechannel, renamechannel, channellimit, channelbitrate, tempchannel, channelinfo
-- addrole, removerole, createrole, deleterole, renamerole, rolecolor, roleinfo
+Commands added:
+- antiraid
+- antispam
+- antilink
+- antiinvite
+- antibot
+- antiflood
+- altcheck
+- blacklistuser
+- unblacklistuser
+- wordfilter
+
+Database additions:
+- temp_channels, temp_roles
+- antiraid_settings
+- blacklist_users
+- wordfilters
+
+Tests:
+- antiraid.test.js covers toggles, blacklist, and wordfilter DB helpers
 
 Notes:
-- Temporary channels are persisted in `temp_channels` table.
-- Confirmation flows use `src/middleware/confirm.js` for destructive actions where appropriate.
+- Enforcement hooks (real-time message scanning) will be added in a later batch to avoid heavy event logic in this step.
