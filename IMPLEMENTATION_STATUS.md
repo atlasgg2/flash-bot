@@ -1,17 +1,9 @@
-Part 2: Moderation commands added
+Part 3: Channel & Role management added (batch)
 
 Commands implemented in this batch:
-- kick
-- ban
-- warn
-- warnings
-- purge
-- lock
-
-Added tests:
-- permissionGuard unit tests
-- moderation DB tests for warnings
+- createchannel, createvoice, createstage, createcat, deletechannel, renamechannel, channellimit, channelbitrate, tempchannel, channelinfo
+- addrole, removerole, createrole, deleterole, renamerole, rolecolor, roleinfo
 
 Notes:
-- Moderation commands use the permissionGuard to validate user and bot permissions and role hierarchy.
-- Destructive batch operations will be confirmed in later steps (masskick/massban etc.).
+- Temporary channels are persisted in `temp_channels` table.
+- Confirmation flows use `src/middleware/confirm.js` for destructive actions where appropriate.
