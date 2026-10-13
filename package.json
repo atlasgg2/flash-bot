@@ -1,0 +1,23 @@
+{
+  "name": "flash-bot",
+  "version": "0.1.0",
+  "description": "Flash - modular Discord bot foundation",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "mocha --exit"
+  },
+  "author": "HeavenCloud India",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^8.4.0",
+    "discord.js": "^14.11.0",
+    "dotenv": "^16.3.1",
+    "ms": "^2.1.3"
+  },
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "mocha": "^10.2.0",
+    "sinon": "^15.2.0"
+  }
+}
